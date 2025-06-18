@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>在庫管理ミニ</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body { font-family: -apple-system, Helvetica, Arial, sans-serif; padding: 1em; }
+    button { margin: .5em 0; padding: .5em 1em; }
+    #log { white-space: pre-wrap; border:1px solid #ccc; padding: .5em; height:150px; overflow:auto; }
+  </style>
+</head>
+<body>
+  <h2>在庫管理ミニ</h2>
+  <div id="reader" style="width:100%;"></div>
+  <button id="stop">停止</button>
+  <div>
+    <label>保管場所：</label>
+    <input id="location" placeholder="例: A01-01" />
+  </div>
+  <button id="save">CSVダウンロード</button>
+  <h3>履歴</h3>
+  <div id="log"></div>
+
+  <script>
+    const logEl = document.getElementById("log");
+    let records = [];
+
+    // QR/バーコードスキャン開始
+    const html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: 250 },
+      (decoded) => {
+        const loc = document.getElementById("location").value || "―未入力―";
+        const time = new Date().toLocaleTimeString();
+        const rec = { code: decoded, location: loc, time };
+        records.push(rec);
+        logEl.textContent += `${time} 登録▶ ${decoded} → ${loc}\n`;
+      }
+    ).catch(err => alert("カメラ起動失敗：" + err));
+
+    // 停止ボタン
+    document.getElementById("stop").onclick = () => {
+      html5QrCode.stop();
+    };
+
+    // CSVダウンロード
+    document.getElementById("save").onclick = () => {
+      let csv = "パレットNo.,保管場所,時刻\n"
+        + records.map(r => `${r.code},${r.location},${r.time}`).join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `zen_inventory_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    };
+  </script>
+</body>
+</html>
